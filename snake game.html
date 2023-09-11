@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Snake Game</title>
+  <style>
+    body {
+      background-color: green;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    canvas {
+      border: 5px dashed black;
+      outline: 10px solid black;
+      background-color: silver;
+    }
+    #s {
+      text-align: center;
+      font-size: 50px;
+    }
+    button {
+      border: 2px solid red;
+      margin-right: 50px;
+      margin-left: 0px;
+      padding: 15px 30px; /* Increase button size */
+      font-size: 24px; /* Increase font size */
+    }
+    /* Add a game over overlay */
+    #gameOverOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    #gameOverMessage {
+      font-size: 36px;
+      color: white;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <p id="s">
+    <button id="pauseButton">Pause</button>
+    <button id="restartButton">Restart</button>
+  </p>
+  <canvas id="gameCanvas" width="600" height="400"></canvas>
+  <!-- Add game over overlay -->
+  <div id="gameOverOverlay">
+    <div id="gameOverMessage"></div>
+  </div>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const gameOverOverlay = document.getElementById("gameOverOverlay");
+    const gameOverMessage = document.getElementById("gameOverMessage");
+
+    const boxSize = 15;
+    let snake = [{ x: 10, y: 10 }];
+    let apples = [{ x: 5, y: 5 }]; // Use apples as food
+    let dx = 1;
+    let dy = 0;
+    let score = 0;
+    let gameInterval;
+    let isPaused = false; // Added variable to track game state
+
+    function drawSnakePart(snakePart) {
+      // Use a dynamic color based on score
+      const snakeColor = score % 2 === 0 ? "blue" : "deeppink";
+      ctx.fillStyle = snakeColor;
+      ctx.fillRect(snakePart.x * boxSize, snakePart.y * boxSize, boxSize, boxSize);
+    }
+
+    function drawApples() {
+      ctx.fillStyle = "red";
+      apples.forEach((apple) => {
+        ctx.fillRect(apple.x * boxSize, apple.y * boxSize, boxSize, boxSize);
+      });
+    }
+
+    function collision() {
+      for (let i = 1; i < snake.length; i++) {
+        if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function getRandomColor() {
+      const letters = "0123456789ABCDEF";
+      let color = "#";
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+
+    function showGameOver(message) {
+      gameOverMessage.textContent = message;
+      gameOverOverlay.style.display = "flex";
+    }
+
+    function updateGame() {
+      if (!isPaused) { // Check if the game is not paused
+        const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+
+        // Check for collision with the boundary
+        if (head.x < 0 || head.x >= canvas.width / boxSize || head.y < 0 || head.y >= canvas.height / boxSize) {
+          clearInterval(gameInterval);
+          showGameOver("Game Over!Score: " + score);
+          return;
+        }
+
+        snake.unshift(head);
+
+        let ateApple = false;
+        apples.forEach((apple, index) => {
+          if (head.x === apple.x && head.y === apple.y) {
+            apples.splice(index, 1); // Remove the eaten apple
+            score++;
+            ateApple = true;
+          }
+        });
+
+        if (!ateApple) {
+          snake.pop();
+        }
+
+        if (apples.length === 0) {
+          // Generate a new apple when all apples are eaten
+          apples.push({
+            x: Math.floor(Math.random() * (canvas.width / boxSize)),
+            y: Math.floor(Math.random() * (canvas.height / boxSize)),
+          });
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        snake.forEach(drawSnakePart);
+        drawApples();
+
+        document.getElementById("score").innerHTML = "Score: " + score;
+      }
+    }
+
+    document.addEventListener("keydown", (event) => {
+      switch (event.key) {
+        case "ArrowLeft":
+          if (dx !== 1) {
+            dx = -1;
+            dy = 0;
+          }
+          document.body.style.backgroundColor = getRandomColor();
+          break;
+        case "ArrowUp":
+          if (dy !== 1) {
+            dx = 0;
+            dy = -1;
+          }
+          document.body.style.backgroundColor = getRandomColor();
+          break;
+        case "ArrowRight":
+          if (dx !== -1) {
+            dx = 1;
+            dy = 0;
+          }
+          document.body.style.backgroundColor = getRandomColor();
+          break;
+        case "ArrowDown":
+          if (dy !== -1) {
+            dx = 0;
+            dy = 1;
+          }
+          document.body.style.backgroundColor = getRandomColor();
+          break;
+      }
+    });
+
+    // Add event listener for the pause button
+    document.getElementById("pauseButton").addEventListener("click", () => {
+      isPaused = !isPaused; // Toggle the game state when the button is clicked
+    });
+
+    // Add event listener for the restart button
+    document.getElementById("restartButton").addEventListener("click", () => {
+      // Reset the game
+      snake = [{ x: 10, y: 10 }];
+      apples = [{ x: 5, y: 5 }];
+      dx = 1;
+      dy = 0;
+      score = 0;
+      isPaused = false;
+      document.getElementById("score").innerHTML = "Score: " + score;
+
+      // Clear canvas and restart the game interval
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      gameOverOverlay.style.display = "none"; // Hide the game over overlay
+      gameInterval = setInterval(updateGame, 200);
+    });
+
+    gameInterval = setInterval(updateGame, 200);
+  </script>
+</body>
+</html>
